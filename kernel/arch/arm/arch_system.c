@@ -5,7 +5,6 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <string.h>
-#include <machine/cmos.h>
 #include <machine/bios.h>
 #include <machine/cpu.h>
 #include <minix/portio.h>
@@ -19,40 +18,15 @@
 #include "archconst.h"
 #include "arch_proto.h"
 #include "serial.h"
-#include "oxpcie.h"
 #include "direct_utils.h"
 #include <machine/multiboot.h>
 
 #include "glo.h"
 
-#ifdef USE_APIC
-#include "apic.h"
-#endif
-
-#ifdef USE_ACPI
-#include "acpi.h"
-#endif
-
-static int osfxsr_feature; /* FXSAVE/FXRSTOR instructions support (SSEx) */
-
-/* set MP and NE flags to handle FPU exceptions in native mode. */
-#define CR0_MP_NE	0x0022
-/* set CR4.OSFXSR[bit 9] if FXSR is supported. */
-#define CR4_OSFXSR	(1L<<9)
-/* set OSXMMEXCPT[bit 10] if we provide #XM handler. */
-#define CR4_OSXMMEXCPT	(1L<<10)
-
 void * k_stacks;
 
 static void ser_debug(int c);
 static void ser_dump_vfs(void);
-
-#ifdef CONFIG_SMP
-static void ser_dump_proc_cpu(void);
-#endif
-#if !CONFIG_OXPCIE
-static void ser_init(void);
-#endif
 
 void fpu_init(void)
 {
