@@ -1,0 +1,169 @@
+#	$NetBSD: NetBSD.dist.base,v 1.103 2012/06/21 04:30:04 pgoyette Exp $
+#	@(#)4.4BSD.dist	8.1 (Berkeley) 6/13/93
+
+# Do not customize this file as it may be overwritten on upgrades.
+# Put your custom specifications in /etc/mtree/special.local.
+# See security.conf(5) for details.
+
+#
+# LSC This file has been adapted for MINIX
+#
+
+/set type=dir uid=0 gid=0 mode=0755
+.
+./bin
+./boot
+./boot/minix
+./boot/minix_default
+./dev
+./etc
+./etc/defaults
+./etc/devmand
+./etc/devmand/scripts
+./etc/mtree
+./etc/system.conf.d
+./home
+./lib
+./libexec
+./mnt
+./proc
+./root
+./sbin
+./sys
+./usr
+./usr/adm
+./usr/adm/old
+./usr/ast
+./usr/bin
+./usr/etc
+./usr/benchmarks
+./usr/benchmarks/unixbench
+./usr/benchmarks/unixbench/pgms
+./usr/benchmarks/unixbench/tmp
+./usr/benchmarks/unixbench/testdir
+./usr/benchmarks/unixbench/results
+./usr/include
+./usr/include/arpa
+./usr/include/compat
+./usr/include/compat/machine
+./usr/include/ddekit
+./usr/include/ddekit/minix
+./usr/include/g++
+./usr/include/i386
+./usr/include/lzma
+./usr/include/minix
+./usr/include/net
+./usr/include/net/gen
+./usr/include/prop
+./usr/include/protocols
+./usr/include/readline
+./usr/include/rpcsvc
+./usr/include/ssp
+./usr/include/sys
+./usr/include/ufs
+./usr/include/ufs/chfs
+./usr/include/ufs/ext2fs
+./usr/include/ufs/ffs
+./usr/include/ufs/lfs
+./usr/include/ufs/mfs
+./usr/include/ufs/ufs
+./usr/lib
+./usr/lib/cawf
+./usr/lib/dict
+./usr/lib/flex
+./usr/lib/fonts
+./usr/lib/keymaps
+./usr/libexec
+./usr/log
+./usr/man
+./usr/man/man1
+./usr/man/man1x
+./usr/man/man2
+./usr/man/man3
+./usr/man/man4
+./usr/man/man5
+./usr/man/man6
+./usr/man/man7
+./usr/man/man8
+./usr/man/man9
+./usr/mdec
+./usr/pkg
+./usr/pkg/etc
+./usr/pkg/etc/rc.d
+./usr/preserve
+./usr/run
+./usr/sbin
+./usr/share
+./usr/share/doc
+./usr/share/doc/html
+./usr/share/doc/html/bzip2
+./usr/share/doc/psd
+./usr/share/doc/psd/19.curses
+./usr/share/misc
+./usr/share/mk
+./usr/share/terminfo
+./usr/share/zoneinfo
+./usr/share/zoneinfo/Africa
+./usr/share/zoneinfo/America
+./usr/share/zoneinfo/America/Argentina
+./usr/share/zoneinfo/America/Indiana
+./usr/share/zoneinfo/America/Kentucky
+./usr/share/zoneinfo/America/North_Dakota
+./usr/share/zoneinfo/Antarctica
+./usr/share/zoneinfo/Arctic
+./usr/share/zoneinfo/Asia
+./usr/share/zoneinfo/Atlantic
+./usr/share/zoneinfo/Australia
+./usr/share/zoneinfo/Brazil
+./usr/share/zoneinfo/Canada
+./usr/share/zoneinfo/Chile
+./usr/share/zoneinfo/Etc
+./usr/share/zoneinfo/Europe
+./usr/share/zoneinfo/Indian
+./usr/share/zoneinfo/Mexico
+./usr/share/zoneinfo/Mideast
+./usr/share/zoneinfo/Pacific
+./usr/share/zoneinfo/US
+./usr/spool
+./usr/spool/at
+./usr/spool/at/past
+./usr/spool/crontabs
+./usr/spool/locks
+./usr/spool/lpd
+./usr/spool/mail
+./usr/src
+./usr/tests
+./usr/var
+./usr/var/db
+./usr/var/db/pkg
+./usr/var/run
+./var
+./var/db
+./var/db/obsolete
+./var/run
+
+# Directories with special access rights
+/set type=dir uid=0 gid=0 mode=1777
+./tmp
+./usr/tmp
+
+/set type=dir uid=8 gid=0 mode=755
+./home/ast
+
+/set type=dir uid=2 gid=0 mode=755
+./home/bin
+
+/set type=dir uid=2 gid=0 mode=755
+./usr/tests/minix-posix
+
+# this one is for term(1)
+/set type=dir uid=0 gid=5 mode=775
+./usr/spool/locks
+
+# Symlinks
+/set type=link uid=0 gid=0 mode=0777
+./dev/mouse
+./usr/bin/cc
+./usr/bin/strip
+./var/log
+./var/tmp

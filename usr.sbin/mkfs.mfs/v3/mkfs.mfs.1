@@ -1,0 +1,121 @@
+.Dd April 28, 2013
+.Dt MKFS.MFS 1
+.Os MINIX 3
+.Sh NAME
+.Nm mkfs.mfs
+.Nd make a file system
+.Sh SYNOPSIS
+.Nm
+.Op Fl ldtv
+.Op Fl B Ar blocksize
+.Op Fl i Ar inodes
+.Op Fl b Ar blocks
+.Op Fl z Ar zone_shift
+.Op Fl x Ar extra_space
+.Ar special
+.Op Ar prototype
+.Sh OPTIONS
+The following options are available:
+.Bl -tag -width indent
+.It Fl l
+Make a listing on standard output
+.It Fl d
+Use mod time of
+.Nm
+binary for all files
+.It Fl t
+Do not test if file system fits on the medium
+.It Fl v
+Be verbose on standard error stream; more
+.It Fl v
+options add to verbosity
+.It Fl i Ar inodes
+Number of i-nodes (files)
+.It Fl B Ar blocksize
+Filesystem block size (in bytes)
+.It Fl b Ar blocks
+Filesystem size (in blocks)
+.It Fl x Ar extra_space
+Extra space after dynamic sizing (blocks and inodes)
+.It Fl z Ar zone_shift
+Logarithm of the size of a zone with respect to a zone.
+With the default value of 0 zones are of the same size as blocks;
+with 1, each zone is made of two blocks; etc.
+.El
+.Sh EXAMPLES
+.Bl -enum
+.It
+Make a file system on 
+.Pa /dev/ram1
+.Bd
+.Nm
+.Cm /dev/ram1 proto
+.Ed
+.It
+Make empty 300,000-block file system
+.Bd
+.Nm
+.Cm -b 300000 /dev/c0d0p0s0
+.Ed
+.It
+Alternate way to specify the size
+.Bd
+.Nm
+.Cm /dev/c0d0p0s0 300000
+.Ed
+.El
+.Sh DESCRIPTION
+The
+.Nm
+builds a file system and copies specified files to it.
+The prototype file tells which directories and files to copy to it.
+If the prototype file cannot be opened, and its name is just a string of
+digits, an empty file system will be made with the specified number of
+blocks.
+A sample prototype file follows.
+The text following the \fI#\fR sign in the example below is comment.
+In real prototype files, comments are not allowed.
+.Bd -literal
+	boot			# boot block file (ignored)
+	360 63			# blocks and i-nodes
+	d--755 1 1		# root directory
+	   bin	d--755 \|2 1	# bin dir: mode (755), uid (2), gid (1)
+		sh	\|---755 2 1 /user/bin/shell	# shell has mode \fIrwxr-xr-x\fP
+		mv	-u-755 2 1 /user/bin/mv	# u = SETUID bit
+		login	-ug755 2 1 /user/bin/login	# SETUID and SETGID
+	   $			# end of \fI/bin\fP
+	   dev	d--755 2 1	# special files: tty (char), fd0 (block)
+		tty	c--777 2 1 4 0	# uid=2, gid=1, major=4, minor=0
+		fd0	b--644 2 1 2 0 360	# uid, gid, major, minor, blocks
+	   $			# end of \fI/dev\fP
+	   user	d--755 12 1	# user dir: mode (755), uid (12), gid (1)
+		ast	d--755 12 1	# \fI/user/ast\fP
+		$		# \fI/user/ast\fP is empty
+	   $			# end of \fI/user\fP
+	$			# end of root directory
+.Ed
+.Pp
+The first entry on each line (except the first 3 and the $ lines, which
+terminate directories) is the name the file or directory will get on the
+new file system.  
+Next comes its mode, with the first character being
+.Cm -dbcs
+for regular files, directories, block special files, character 
+special files, and symlinks, respectively.
+The next two characters are used to specify the SETUID and SETGID bits, as
+shown above.
+The last three characters of the mode are the 
+.Cm rwx
+protection bits, in octal notation.
+.Pp
+Following the mode are the uid and gid.
+For special files, the major and minor devices are needed.
+.Sh "SEE ALSO"
+.Xr mkproto 1 ,
+.Xr fsck.mfs 1 ,
+.Xr mount 1 .
+.Sh AUTHORS
+The
+.Nm
+utility was written by
+.An Andy Tanenbaum, Paul Ogilvie, Frans Meulenbroeks, Bruce Evans

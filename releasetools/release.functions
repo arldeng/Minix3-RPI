@@ -1,0 +1,227 @@
+
+make_hdimage()
+{
+	dd if=$TMPDISKUSR of=usrimage bs=$BS count=$USRBLOCKS
+
+	rootsize=`stat -f %z rootimage`
+	usrsize=`stat -f %z usrimage`
+
+	rootsects=`expr $rootsize / 512`
+	usrsects=`expr $usrsize / 512`
+
+	# installboot -m needs at least 1KB 
+	dd < /dev/zero >tmpimage count=2
+	partition -fm tmpimage 2 81:$rootsects* 0:0 81:$usrsects
+	installboot_nbsd -m tmpimage /usr/mdec/mbr
+	dd < tmpimage > subpart count=1
+
+	primsects=`expr 1 + $rootsects + $usrsects`
+	cyl=`expr '(' $primsects ')' / $secs + 1`
+	padsects=`expr $cyl \* $secs - 1 - $primsects`
+
+	{ dd < /dev/zero count=1
+		cat subpart
+		cat rootimage
+		cat usrimage
+		dd < /dev/zero count=$padsects
+	} > hdimage
+	partition -m hdimage 81:`expr $primsects + $padsects`*
+	installboot_nbsd -m hdimage /usr/mdec/mbr
+}
+
+retrieve()
+{
+	dir=$1
+	list=`pwd`/$2
+	URLS=""
+	echo "Retrieving packages form $PACKAGEURL"
+	(
+	cd $dir || exit 1
+	SUMMARY=pkg_summary
+	rm -f pkg_summary* || true
+	fetch $PACKAGEURL/$SUMMARY.bz2
+	bzip2 -d $SUMMARY.bz2
+	cat $list | while read name
+	do	pkgname="`fgrep PKGNAME=${name} $SUMMARY | sed 's/PKGNAME=//g'`"
+		if [ `echo $pkgname | wc -w` -ne 1 ]
+		then	echo " *** Could not resolve $name (not found or too many matches: $pkgname) ***"
+		else	echo Getting $pkgname
+			fetch -r ${PACKAGEURL}/${pkgname}.tgz
+		fi
+		echo -n "."
+	done
+	)
+	echo done
+}
+
+cd_root_changes()
+{
+cat >$CDFILES/boot.cfg <<END_BOOT_CFG
+banner=Welcome to the MINIX 3 installation CD
+banner================================================================================
+banner=
+menu=Regular MINIX 3:multiboot /kernel bootcd=1 cdproberoot=1 rootdevname=ram disable=inet
+menu=Regular MINIX 3 (with AHCI):multiboot /kernel bootcd=1 cdproberoot=1 rootdevname=ram disable=inet ahci=yes
+menu=Edit menu option:edit
+menu=Drop to boot prompt:prompt
+clear=1
+timeout=10
+default=1
+load=/mod01_ds
+load=/mod02_rs
+load=/mod03_pm
+load=/mod04_sched
+load=/mod05_vfs
+load=/mod06_memory
+load=/mod07_log
+load=/mod08_tty
+load=/mod09_mfs
+load=/mod10_vm
+load=/mod11_pfs
+load=/mod12_init
+# This space intentionally left blank - leave to appease bootloader!
+# This space intentionally left blank - leave to appease bootloader!
+# This space intentionally left blank - leave to appease bootloader!
+# This space intentionally left blank - leave to appease bootloader!
+# This space intentionally left blank - leave to appease bootloader!
+# This space intentionally left blank - leave to appease bootloader!
+# This space intentionally left blank - leave to appease bootloader!
+# This space intentionally left blank - leave to appease bootloader!
+# This space intentionally left blank - leave to appease bootloader!
+# This space intentionally left blank - leave to appease bootloader!
+# This space intentionally left blank - leave to appease bootloader!
+# This space intentionally left blank - leave to appease bootloader!
+# This space intentionally left blank - leave to appease bootloader!
+# This space intentionally left blank - leave to appease bootloader!
+# This space intentionally left blank - leave to appease bootloader!
+# This space intentionally left blank - leave to appease bootloader!
+# This space intentionally left blank - leave to appease bootloader!
+# This space intentionally left blank - leave to appease bootloader!
+END_BOOT_CFG
+}
+
+
+hdemu_root_changes()
+{
+	$RELEASEDIR/usr/sbin/installboot_nbsd $TMPDISKROOT \
+		$RELEASEDIR/usr/mdec/bootxx_minixfs3
+
+cat >$RELEASEMNTDIR/boot.cfg <<END_BOOT_CFG
+menu=Regular MINIX 3:load_mods /boot/minix_default/mod*;multiboot /boot/minix_default/kernel bootcd=2 disable=inet bios_wini=yes bios_remap_first=1 ramimagedev=c0d7p0s0
+menu=Edit menu option:edit
+menu=Drop to boot prompt:prompt
+clear=1
+timeout=10
+default=1
+END_BOOT_CFG
+}
+
+usb_root_changes()
+{
+	$RELEASEDIR/usr/sbin/installboot_nbsd $TMPDISKROOT \
+		$RELEASEDIR/usr/mdec/bootxx_minixfs3
+	echo \
+cat >$RELEASEMNTDIR/boot.cfg <<END_BOOT_CFG
+menu=Regular MINIX 3:load_mods /boot/minix_default/mod*;multiboot /boot/minix_default/kernel bios_wini=yes bios_remap_first=1 rootdevname=c0d7p0s0
+menu=Edit menu option:edit
+menu=Drop to boot prompt:prompt
+clear=1
+timeout=10
+default=1
+END_BOOT_CFG
+}
+
+copy_local_packages()
+{
+	if [ -d $PACKAGEDIR -a -f $PACKAGELIST -a $PACKAGES -ne 0 ]
+	then
+		index=pkg_summary
+		indexpath=$PACKAGEDIR/.index
+	
+		if [ ! -d $indexpath ]
+		then	mkdir $indexpath
+		fi
+		if [ ! -d $indexpath ]
+		then	echo "Couldn't create $indexpath."
+			exit 1
+		fi
+	
+		echo "" >$PACKAGEDIR/All/$index
+	
+	        echo " * Transfering $PACKAGEDIR to $RELEASEPACKAGE"
+	        for pkgprefix in `cat $PACKAGELIST`
+	        do	realfn="`echo $PACKAGEDIR/All/${pkgprefix}*.tgz`"
+			if [ -f "$realfn" ]
+	               then
+			  # Copy package and create package's index
+			  (
+			      p="`basename $realfn`"
+			      cd $PACKAGEDIR/All
+			      cp $p $RELEASEPACKAGE/
+	
+			      indexname=$indexpath/$p.$index
+			      pkg_info -X $p >$indexname
+	
+			      if [ ! -f $indexname ]
+			      then	echo Missing $indexname.
+				  exit 1
+			      fi
+	
+			      if [ "`wc -l $indexname`" -lt 3 ]
+			      then	$indexname is too short.
+				  rm $indexname
+				  exit 1
+			      fi
+	
+			      cat $indexname >>$PACKAGEDIR/All/$index
+			  )
+	               else
+	                  echo "Can't find $pkgprefix Missing."
+	               fi
+	        done
+	
+		bzip2 -f $PACKAGEDIR/All/$index
+		cp $PACKAGEDIR/All/$index.bz2 $RELEASEPACKAGE/
+	fi
+}
+
+fitfs()
+{
+	path="$1"
+	ramdisk="$2"
+	extra_inodes="$3"
+	extra_zones="$4"
+	mbsdefault="$5"
+
+	# Determine number of inodes
+	inodes=`find $path | egrep -v ^$path/usr | wc -l`
+	inodes="`expr $inodes + $extra_inodes`"
+
+	# Determine number of data zones
+	zonekbs=`du -ks $path | cut -d'	' -f1`
+	zonekbsignore=0
+	[ ! -d $path/usr ] || zonekbsignore=`du -ks $path/usr | cut -d"	" -f1`
+	zones="`expr \( $zonekbs - $zonekbsignore \) / \( $BS / 1024 \) + $extra_zones`"
+
+	# Determine file system size
+	BSBITS="`expr $BS \* 8`"
+	imap_blocks="`expr \( $inodes + $BSBITS - 1 \) / $BSBITS`"
+	inode_blocks="`expr \( $inodes \* 64 + $BS - 1 \) / $BS`"
+	zmap_blocks="`expr \( $zones + $BSBITS - 1 \) / $BSBITS`"
+	blocks="`expr 1 + 1 + $imap_blocks + $zmap_blocks + $inode_blocks + $zones`"
+	kbs="`expr $blocks \* \( $BS / 1024 \)`"
+
+	# Apply default if higher
+	if [ -n "$mbsdefault" ]
+	then
+		kbsdefault="`expr $mbsdefault \* 1024`"
+		if [ "$kbs" -lt "$kbsdefault" ]
+		then kbs=$kbsdefault
+		else echo "warning: ${mbsdefault}mb is too small, using ${kbs}kb"
+		fi
+	fi
+
+	# Create a filesystem on the target ramdisk
+	ramdisk $kbs $ramdisk
+	mkfs.mfs -B $BS -i $inodes $ramdisk
+}

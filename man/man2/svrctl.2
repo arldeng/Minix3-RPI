@@ -1,0 +1,40 @@
+.\" svrctl.2
+.\"
+.\" Created: July, 1994 by Philip Homburg <philip@cs.vu.nl>
+.TH svrctl 2
+.SH NAME
+svrctl \- special server control functions
+.SH SYNOPSIS
+.nf
+.ft B
+#include <sys/svrctl.h>
+
+int svrctl(u32_t \fIrequest\fP, void *\fIdata\fP);
+.ft R
+.fi
+.SH DESCRIPTION
+.B Svrctl
+implements some very MINIX 3 specific system calls that don't deserve their own
+system call number.
+.PP
+This system call makes it easy to add new ways of setting and getting system
+parameters, but at the same time, backwards compatibility is not guaranteed.
+Read the <sys/svrctl.h> include file to see what the structures mentioned below
+look like.  Most calls are root-only, unless specified otherwise.
+.PP
+The only way to know how to properly use these calls is to study the
+associated server code, or the programs that already use these
+calls.
+.PP
+Current requests are:
+.TP 5
+.B MMGETPARAM
+Request the value of one or all boot parameters.  Can be used by non-root.
+.TP
+.B MMSETPARAM
+Set an override for a value of a boot parameter.  Can be used by non-root.
+.SH "RETURN VALUES"
+.B Svrctl
+returns 0 upon success and -1 upon failure.
+.SH AUTHOR
+Philip Homburg <philip@cs.vu.nl>
