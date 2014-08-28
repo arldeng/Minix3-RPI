@@ -13,44 +13,7 @@
  * Intel architecture performance counters watchdog
  */
 
-static struct arch_watchdog intel_arch_watchdog;
-static struct arch_watchdog amd_watchdog;
-
-static void intel_arch_watchdog_init(const unsigned cpu)
-{
-	u64_t cpuf;
-	u32_t val;
-
-	ia32_msr_write(INTEL_MSR_PERFMON_CRT0, 0, 0);
-
-	/* Int, OS, USR, Core ccyles */
-	val = 1 << 20 | 1 << 17 | 1 << 16 | 0x3c;
-	ia32_msr_write(INTEL_MSR_PERFMON_SEL0, 0, val);
-
-	/*
-	 * should give as a tick approx. every 0.5-1s, the perf counter has only
-	 * lowest 31 bits writable :(
-	 */
-	cpuf = cpu_get_freq(cpu);
-	while (ex64hi(cpuf) || ex64lo(cpuf) > 0x7fffffffU)
-		cpuf = div64u64(cpuf, 2);
-	cpuf = make64(-ex64lo(cpuf), ex64hi(cpuf));
-	watchdog->resetval = watchdog->watchdog_resetval = cpuf;
-
-	ia32_msr_write(INTEL_MSR_PERFMON_CRT0, 0, ex64lo(cpuf));
-
-	ia32_msr_write(INTEL_MSR_PERFMON_SEL0, 0,
-			val | INTEL_MSR_PERFMON_SEL0_ENABLE);
-
-	/* unmask the performance counter interrupt */
-	lapic_write(LAPIC_LVTPCR, APIC_ICR_DM_NMI);
-}
-
-static void intel_arch_watchdog_reinit(const unsigned cpu)
-{
-	lapic_write(LAPIC_LVTPCR, APIC_ICR_DM_NMI);
-	ia32_msr_write(INTEL_MSR_PERFMON_CRT0, 0, ex64lo(watchdog->resetval));
-}
+static struct arch_watchdog arm_watchdog;
 
 int arch_watchdog_init(void)
 {
@@ -62,7 +25,7 @@ int arch_watchdog_init(void)
 		return -1;
 	}
 
-	if (cpu_info[cpu].vendor == CPU_VENDOR_INTEL) {
+	if (cpu_info[cpu].vendor == CPU_VENDOR_ARM) {
 		eax = 0xA;
 
 		_cpuid(&eax, &ebx, &ecx, &edx);
@@ -76,17 +39,8 @@ int arch_watchdog_init(void)
 		if (!((((eax >> 8)) & 0xff) > 0))
 			return -1;
 
-		watchdog = &intel_arch_watchdog;
-	} else if (cpu_info[cpu].vendor == CPU_VENDOR_AMD) {
-		if (cpu_info[cpu].family != 6 &&
-				cpu_info[cpu].family != 15 &&
-				cpu_info[cpu].family != 16 &&
-				cpu_info[cpu].family != 17)
-			return -1;
-		else
-			watchdog = &amd_watchdog;
-	} else
-		return -1;
+		watchdog = &arm_watchdog;
+    }
 
 	/* Setup PC overflow as NMI for watchdog, it is masked for now */
 	lapic_write(LAPIC_LVTPCR, APIC_ICR_INT_MASK | APIC_ICR_DM_NMI);
