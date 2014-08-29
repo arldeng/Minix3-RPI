@@ -61,7 +61,9 @@ void arch_proc_setcontext(struct proc *p, struct stackframe_s *state, int isuser
     
     if (!(p->p_rts_flags)
     {
-        
+        printf("WARNING: setting full context of runnable process\n");
+	print_proc(p);
+	util_stacktrace();
     }
 }
 
@@ -69,6 +71,11 @@ void arch_set_secondary_ipc_return(struct proc *p, u32_t val)
 {
 	p->p_reg.r1 = val;
 }
+
+int restore_fpu(struct proc *p)
+{
+     return 0;
+})
 
 void cpu_identify(void)
 {
@@ -87,8 +94,34 @@ void cpu_identify(void)
 
 void arch_init(void)
 {
-	k_stacks = (void*) &k_stacks_start;
-	assert(!((vir_bytes) k_stacks % K_STACK_SIZE));
+    u32_t value;
+    
+    k_stacks = (void*) &k_stacks_start;
+    assert(!((vir_bytes) k_stacks % K_STACK_SIZE));
+    
+    #ifndef CONFIG_SMP
+    /*
+     * Use stack 0 and CPU id 0 an a single processor machine, smp
+     * configuration does this in smp_init() for all cpus at once.
+     */
+    tss_init(0, get_k_stack_top(0));
+    #endif
+    
+    ser_init();
+    
+    /* Enable user space access to cycle counter */
+    /* Set cycle counter to 0: ARM ARM B4.1.113 and B4.1.117 */
+    asm volatile ("MRC p15, 0, %0, c9, c12, 0\t\n": "=r" (value));
+    value |= BCM_PMCR_C; /* Reset Counter */
+    value |= BCM_PMCR_E; /* Enable counter hardware */
+    asm volatile ("MCR p15, 0, %0, c9, c12, 0\t\n": : "r" (value));
+    
+    /* Enable CONT counting: ARM ARM B4.1.116 */
+    value = BCM_PMCNTENSET_C; /* Enable PMCCNTR cycle counter */
+    asm volatile ("MCR p15, 0, %0, c9, c12, 1\t\n": : "r" (value));
+    
+    /* Enable cycle counter in user mode: ARM ARM B4.1.124 */
+    asm volatile ("MCR p15, 0, %0, c9, c14, 0\t\n": : "r" (value));
 }
 
 /*===========================================================================*
